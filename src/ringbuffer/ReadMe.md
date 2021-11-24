@@ -8,7 +8,7 @@ In overriding mode old entries will be overridden when the buffer is full.
 In non-overriding mode no entries will be overriden. `ring_buffer_push()` will
 return a non-zero value instead.
 
-> Note: The implementation is not thread-safe. If you want to use it in a 
+> :warning: Warning: The implementation is not thread-safe. If you want to use it in a 
 > multi-threaded environment make sure to serialize the calls to 
 > `ring_buffer_push()` and `ring_buffer_pop()`.
 
