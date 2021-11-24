@@ -50,3 +50,12 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# MacOS files
+.DS_Store
+
+# CMake build directories and files
+build/**
+out/**
+compile_commands.json
+
