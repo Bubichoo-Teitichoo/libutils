@@ -17,8 +17,8 @@
 ///
 struct ring_buffer
 {
-    const size_t capacity;
-    const size_t size;
+    size_t capacity;
+    size_t size;
     int override;
     void *head;
     void *tail;
@@ -65,14 +65,11 @@ ring_buffer_t *ring_buffer_new( const size_t capacity, const size_t size )
     ring_buffer_t *const rb = calloc( 1, memsize );
     if( NULL != rb )
     {
-        const ring_buffer_t tmp = {
-            .capacity = capacity,
-            .size     = size,
-            .override = 1,
-            .head     = ring_buffer_idx_to_ptr( rb, 0U ),
-            .tail     = NULL,
-        };
-        memcpy( rb, &tmp, memsize );
+            rb->capacity = capacity;
+            rb->size     = size;
+            rb->override = 1;
+            rb->head     = ring_buffer_idx_to_ptr( rb, 0U );
+            rb->tail     = NULL;
     }
     return rb;
 }
