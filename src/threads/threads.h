@@ -10,6 +10,7 @@ typedef HANDLE cnd_t;
 #include <pthread.h>
 typedef pthread_t thrd_t;
 typedef pthread_mutex_t mtx_t;
+typedef pthread_cond_t cnd_t;
 #endif   //_MSC_VER
 
 #include <time.h>
