@@ -3,7 +3,7 @@
 A generic and minimalistic implementation of a fixed size FIFO (first in, first 
 out) array.
 The buffer has two operating modes: 
-- __overriding__: Oldest entries in will be overriden when the buffer is full
+- __overriding__: Oldest entries will be overriden when the buffer is full
 - __non-overriding__: No entries will be overriden. Instead `ring_buffer_push()` will return a non-zero value.
 
 The mode can be set dynamically using `ring_buffer_enable_override()`.
