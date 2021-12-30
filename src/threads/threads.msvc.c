@@ -3,7 +3,7 @@
 
 int thrd_create( thrd_t *tid, thrd_start_t func, void *arg )
 {
-    ( *tid ) = (HANDLE)_beginthreadex( NULL, 0U, func, arg, 0U, NULL );
+    ( *tid ) = (HANDLE)_beginthreadex( NULL, 0U, (_beginthreadex_proc_type)func, arg, 0U, NULL );
     return ( ( NULL == *tid ) ? thrd_error : thrd_success );
 }
 
