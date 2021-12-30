@@ -1,2 +1,5 @@
-add_library(ringbuffer ringbuffer/ringbuffer.c)
-add_library(linkedlist linkedlist/linkedlist.c)
+add_subdirectory(linkedlist)
+add_subdirectory(logging)
+add_subdirectory(ringbuffer)
+add_subdirectory(threads)
+add_subdirectory(semaphore)
