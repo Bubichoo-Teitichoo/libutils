@@ -49,7 +49,6 @@ jobs:
         arch:
           - x64
           - x86
-          - amd64_x86
           
     steps:
     - uses: actions/checkout@v2
