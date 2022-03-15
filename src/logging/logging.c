@@ -3,7 +3,6 @@
 
 #include <stdarg.h>
 #include <string.h>
-#include <stdatomic.h>
 
 #include "dynamic-array.h"
 #include "threads.h"
@@ -38,16 +37,14 @@ struct log_sink
 static dynamic_array_t *sinks = NULL;
 static mtx_t mtx;
 
-
 static char *log_level_to_ansii_color_string( const log_level_t lvl );
 static void log_create_timestamp( char *buf, size_t len, struct timespec *ts );
 
 static inline void log_init( const int init_default )
 {
-    static atomic_int initialized = 0;
-    if( 0 == initialized )
+    static atomic_flag initialized = ATOMIC_FLAG_INIT;
+    if( 0 == atomic_flag_test_and_set(&initialized) )
     {
-        initialized = 1;
         mtx_init( &mtx, 0U );
         sinks = dynamic_array_new( sizeof( log_sink_t ), 10 );
 

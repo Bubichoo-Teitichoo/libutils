@@ -4,6 +4,7 @@
 #if defined( _MSC_VER )
 
 #include <Windows.h>
+#include <stdbool.h>
 
 #define CLOCK_REALTIME 1
 
@@ -19,7 +20,19 @@ static int clock_gettime(int a, struct timespec* spec)
 	return 0;
 }
 
+#define ATOMIC_FLAG_INIT { 0 }
+
+typedef struct atomic_flag { bool _Value; } atomic_flag;
+
+static bool atomic_flag_test_and_set(volatile atomic_flag *flag)
+{
+    return _InterlockedExchange8((volatile char*)flag, 1) == 1;
+}
+
+
 #else
+
+#include <stdatomic.h>
 
 #define xplocaltime( TIME_T, TM ) localtime_r( ( TIME_T ), ( TM ) )
 
