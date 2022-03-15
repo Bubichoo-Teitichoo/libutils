@@ -26,10 +26,10 @@ typedef struct log_sink log_sink_t;
 typedef void ( *log_message_sink )( const log_level_t level, struct timespec *ts, const char *msg, void *data );
 
 void log_write( const log_level_t level, const char *fmt, ... );
-void log_set_level( const log_level_t loglevel );
+void log_set_level(log_sink_t *sink, const log_level_t loglevel );
 
-log_sink_t *log_add_cb_sink( log_message_sink callback, void *data );
-log_sink_t *log_add_file_sink( FILE *file, int colored );
+log_sink_t *log_add_cb_sink( log_message_sink callback, const log_level_t loglevel, void *data );
+log_sink_t *log_add_file_sink( FILE *file, const log_level_t loglevel, int colored );
 
 void log_remove_sink( const log_sink_t *id );
 

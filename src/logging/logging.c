@@ -1,173 +1,203 @@
-#if defined( _MSC_VER )
-#include <Windows.h>
-#endif
+#include "logging.h"
+#include "logging.priv.h"
 
 #include <stdarg.h>
 #include <string.h>
+#include <stdatomic.h>
 
-#include "logging.h"
+#include "dynamic-array.h"
+#include "threads.h"
 
-#if defined( _MSC_VER )
-#define xplocaltime( TIME_T, TM ) localtime_s( ( TM ), ( TIME_T ) )
-#else
-#define xplocaltime( TIME_T, TM ) localtime_r( ( TIME_T ), ( TM ) )
-#endif
+enum log_sink_type
+{
+    LOG_SINK_CB,
+    LOG_SINK_FILE
+};
+
+typedef struct
+{
+    log_message_sink callback;
+    void *data;
+} log_callback_sink_t;
+
+typedef struct
+{
+    FILE *file;
+    int opened;
+    int colored;
+} log_file_sink_t;
 
 struct log_sink
 {
-	FILE* file;
-	int colored;
-	log_message_sink callback;
-	void* data;
+    log_callback_sink_t cbsink;
+    log_file_sink_t fsink;
+    log_level_t max;
+    enum log_sink_type type;
 };
 
-static log_level_t max_level = LOG_LEVEL_INFO;
+static dynamic_array_t *sinks = NULL;
+static mtx_t mtx;
 
-#if defined( _MSC_VER )
-#define CLOCK_REALTIME 1
 
-static int clock_gettime(int a, struct timespec* spec)
+static char *log_level_to_ansii_color_string( const log_level_t lvl );
+static void log_create_timestamp( char *buf, size_t len, struct timespec *ts );
+
+static inline void log_init( const int init_default )
 {
-	__int64 wintime;
-	GetSystemTimeAsFileTime((FILETIME*)&wintime);
-	wintime -= 116444736000000000i64;              // 1jan1601 to 1jan1970
-	spec->tv_sec = wintime / 10000000i64;         // seconds
-	spec->tv_nsec = wintime % 10000000i64 * 100;   // nano-seconds
-	return 0;
-}
-#endif
+    static atomic_int initialized = 0;
+    if( 0 == initialized )
+    {
+        initialized = 1;
+        mtx_init( &mtx, 0U );
+        sinks = dynamic_array_new( sizeof( log_sink_t ), 10 );
 
-static char* log_level_to_ansii_color_string(const log_level_t lvl);
-static void log_create_timestamp(char* buf, size_t len, struct timespec* ts);
-
-void log_write(const log_level_t lvl, const char* fmt, ...)
-{
-	va_list ap;
-	struct timespec now = { 0 };
-	char ts[32] = { 0 };
-	char msg[256] = { 0 };
-
-	if (lvl <= max_level)
-	{
-		clock_gettime(CLOCK_REALTIME, &now);
-
-		va_start(ap, fmt);
-		vsnprintf(msg, sizeof(msg), fmt, ap);
-		va_end(ap);
-
-		log_create_timestamp(ts, sizeof(ts), &now);
-
-		const char* lvlstr = log_level_to_ansii_color_string(lvl);
-
-		fprintf(stderr, "%s [%s] %s\n", ts, lvlstr, msg);
-
-		//for (size_t i = 0U; i < dynamic_array_len(sinks); i++)
-		//{
-		//	log_sink_t sink = DYNAMIC_ARRAY_GET_CAST(sinks, i, log_sink_t);
-		//	if (NULL != sink.file)
-		//	{
-		//		char ts[32] = { 0 };
-		//		log_create_timestamp(ts, sizeof(ts), &now);
-		//
-		//		const char* lvlstr;
-		//		if (sink.colored)
-		//		{
-		//			lvlstr = log_level_to_ansii_color_string(lvl);
-		//		}
-		//		else
-		//		{
-		//			lvlstr = log_level_to_string(lvl);
-		//		}
-		//		fprintf(sink.file, "%s [%s] %s\n", ts, lvlstr, msg);
-		//	}
-		//	else if (NULL != sink.callback)
-		//	{
-		//		sink.callback(lvl, &now, msg, sink.data);
-		//	}
-		//}
-	}
+        if( 1 == init_default )
+        {
+            log_add_file_sink( stderr, LOG_LEVEL_INFO, 1 );
+        }
+    }
 }
 
-void log_set_level(const log_level_t loglevel)
+static inline log_sink_t *log_append_sink( log_sink_t *sink )
 {
-	max_level = loglevel;
-	log_debug("log level changed to %s", log_level_to_string(loglevel));
+    log_init( 0 );
+
+    mtx_lock( &mtx );
+    sink = dynamic_array_append( sinks, &sink );
+    mtx_unlock( &mtx );
+    return sink;
 }
 
-log_sink_t* log_add_cb_sink(log_message_sink callback, void* data)
+void log_write( const log_level_t lvl, const char *fmt, ... )
 {
-	//log_sink_t sink = { 0 };
-	//sink.callback = callback;
-	//sink.data = data;
-	//return dynamic_array_append(sinks, &sink);
-	return NULL;
+    log_init( 1 );
+
+    struct timespec now = { 0 };
+    clock_gettime( CLOCK_REALTIME, &now );
+
+    char ts[ 32 ] = { 0 };
+    log_create_timestamp( ts, sizeof( ts ), &now );
+
+    va_list ap;
+    va_start( ap, fmt );
+    char msg[ 256 ] = { 0 };
+    vsnprintf( msg, sizeof( msg ), fmt, ap );
+    va_end( ap );
+
+    const char *colored_lvl_name = log_level_to_ansii_color_string( lvl );
+    const char *lvl_name         = log_level_to_string( lvl );
+
+    for( size_t idx = 0U; idx < dynamic_array_len( sinks ); idx++ )
+    {
+        const log_sink_t *sink = dynamic_array_get( sinks, idx );
+        if( lvl <= sink->max )
+        {
+            if( LOG_SINK_CB == sink->type )
+            {
+                sink->cbsink.callback( lvl, &now, msg, sink->cbsink.data );
+            }
+            else if( LOG_SINK_FILE == sink->type )
+            {
+                if( sink->fsink.colored )
+                {
+                    fprintf( sink->fsink.file, "%s [%s] %s\n", ts, colored_lvl_name, msg );
+                }
+                else
+                {
+                    fprintf( sink->fsink.file, "%s [%s] %s\n", ts, lvl_name, msg );
+                }
+            }
+        }
+    }
 }
 
-log_sink_t* log_add_file_sink(FILE* file, int colored)
+void log_set_level( log_sink_t *sink, const log_level_t loglevel )
 {
-	//log_sink_t sink = { 0 };
-	//sink.file = file;
-	//sink.colored = colored;
-	//return dynamic_array_append(sinks, &sink);
-	return NULL;
+    if( NULL != sink )
+    {
+        sink->max = loglevel;
+    }
 }
 
-void log_remove_sink(const log_sink_t* sink)
+log_sink_t *log_add_cb_sink( log_message_sink callback, const log_level_t loglevel, void *data )
 {
-	//size_t i = 0U;
-	//for (; i < dynamic_array_len(sinks); i++)
-	//{
-	//	if (sink == dynamic_array_get(sinks, i))
-	//	{
-	//		dynamic_array_remove_fast(sinks, i);
-	//	}
-	//}
+    log_sink_t sink      = { 0 };
+    sink.type            = LOG_SINK_CB;
+    sink.cbsink.callback = callback;
+    sink.cbsink.data     = data;
+    sink.max             = loglevel;
+    return log_append_sink( &sink );
+}
+
+log_sink_t *log_add_file_sink( FILE *file, const log_level_t loglevel, int colored )
+{
+    log_sink_t sink    = { 0 };
+    sink.type          = LOG_SINK_FILE;
+    sink.fsink.file    = file;
+    sink.fsink.opened  = 0;
+    sink.fsink.colored = colored;
+    sink.max           = loglevel;
+    return log_append_sink( &sink );
+}
+
+void log_remove_sink( const log_sink_t *const sink )
+{
+    mtx_lock( &mtx );
+    for( size_t idx = 0U; idx < dynamic_array_len( sinks ); idx++ )
+    {
+        if( sink == dynamic_array_get( sinks, idx ) )
+        {
+            dynamic_array_remove_fast( sinks, idx );
+            break;
+        }
+    }
+    mtx_unlock( &mtx );
 }
 
 
-const char* log_level_to_string(const log_level_t lvl)
+const char *log_level_to_string( const log_level_t lvl )
 {
-	switch (lvl)
-	{
-	case LOG_LEVEL_ERROR:
-		return "ERROR";
-	case LOG_LEVEL_WARNING:
-		return "WARNING";
-	case LOG_LEVEL_INFO:
-		return "INFO";
-	case LOG_LEVEL_DEBUG:
-		return "DEBUG";
-	case LOG_LEVEL_TRACE:
-		return "TRACE";
-	}
-	return NULL;
+    switch( lvl )
+    {
+        case LOG_LEVEL_ERROR:
+            return "ERROR";
+        case LOG_LEVEL_WARNING:
+            return "WARNING";
+        case LOG_LEVEL_INFO:
+            return "INFO";
+        case LOG_LEVEL_DEBUG:
+            return "DEBUG";
+        case LOG_LEVEL_TRACE:
+            return "TRACE";
+    }
+    return NULL;
 }
 
-static char* log_level_to_ansii_color_string(const log_level_t lvl)
+static char *log_level_to_ansii_color_string( const log_level_t lvl )
 {
-	switch (lvl)
-	{
-	case LOG_LEVEL_ERROR:
-		return "\033[0;31mERROR\033[0;37m";
-	case LOG_LEVEL_WARNING:
-		return "\033[0;33mWARNING\033[0;37m";
-	case LOG_LEVEL_INFO:
-		return "\033[0;32mINFO\033[0;37m";
-	case LOG_LEVEL_DEBUG:
-		return "\033[0;35mDEBUG\033[0;37m";
-	case LOG_LEVEL_TRACE:
-		return "\033[0;36mTRACE\033[0;37m";
-	default:
-		return "\033[0;34mUNKN\033[0;37m";
-	}
+    switch( lvl )
+    {
+        case LOG_LEVEL_ERROR:
+            return "\033[0;31mERROR\033[0;37m";
+        case LOG_LEVEL_WARNING:
+            return "\033[0;33mWARNING\033[0;37m";
+        case LOG_LEVEL_INFO:
+            return "\033[0;32mINFO\033[0;37m";
+        case LOG_LEVEL_DEBUG:
+            return "\033[0;35mDEBUG\033[0;37m";
+        case LOG_LEVEL_TRACE:
+            return "\033[0;36mTRACE\033[0;37m";
+        default:
+            return "\033[0;34mUNKN\033[0;37m";
+    }
 }
 
-static void log_create_timestamp(char* buf, size_t len, struct timespec* ts)
+static void log_create_timestamp( char *buf, size_t len, struct timespec *ts )
 {
-	struct tm tm = { 0 };
-	xplocaltime(&ts->tv_sec, &tm);
+    struct tm tm = { 0 };
+    xplocaltime( &ts->tv_sec, &tm );
 
-	char timestamp[32] = { 0 };
-	strftime(timestamp, sizeof(timestamp), "%F %T", &tm);
-	snprintf(buf, len, "%s.%.03ld", timestamp, ts->tv_nsec / 1000000);
+    char timestamp[ 32 ] = { 0 };
+    strftime( timestamp, sizeof( timestamp ), "%F %T", &tm );
+    snprintf( buf, len, "%s.%.03ld", timestamp, ts->tv_nsec / 1000000 );
 }
