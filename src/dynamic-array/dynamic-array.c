@@ -17,6 +17,7 @@ struct dynamic_array
 static int dynamic_array_init( dynamic_array_t *array, const size_t element_size, const size_t initial_size )
 {
     // private method...no need to check arguments
+    array->len        = 0U;
     array->elmnt_size = element_size;
     array->size       = ( 0 != initial_size ) ? initial_size : 10U;
     array->data       = calloc( array->size, element_size );

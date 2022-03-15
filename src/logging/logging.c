@@ -60,7 +60,7 @@ static inline log_sink_t *log_append_sink( log_sink_t *sink )
     log_init( 0 );
 
     mtx_lock( &mtx );
-    sink = dynamic_array_append( sinks, &sink );
+    sink = dynamic_array_append( sinks, sink );
     mtx_unlock( &mtx );
     return sink;
 }
