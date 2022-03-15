@@ -177,9 +177,13 @@ int dynamic_array_remove_fast( dynamic_array_t *array, const size_t index )
     if( NULL != array && index < array->len )
     {
         // override the item to remove with the last item in array
-        if( array->len != index - 1 )
+        if( array->len - 1 != index )
         {
             memcpy( ARRAY_PTR_IDX( array, index ), ARRAY_PTR_IDX( array, array->len - 1 ), array->elmnt_size );
+        }
+        else
+        {
+            memset( ARRAY_PTR_IDX( array, index ), 0, array->elmnt_size );
         }
         array->len--;
         return 0;

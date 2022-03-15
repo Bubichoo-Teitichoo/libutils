@@ -9,6 +9,7 @@
 
 enum log_sink_type
 {
+    LOG_SINK_INVALID = 0,
     LOG_SINK_CB,
     LOG_SINK_FILE
 };
