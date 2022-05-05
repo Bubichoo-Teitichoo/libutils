@@ -1,16 +1,12 @@
-set(UTILS_HEADER_DEST include/${CMAKE_PROJECT_NAME})
+project("async")
 
-# basic data types
-add_subdirectory(structures)
+set(UTILS_HEADER_DEST include/${CMAKE_PROJECT_NAME}/${PROJECT_NAME})
 
-# extended funtionality and cross platform wrapper
-add_subdirectory(async)
-
-# utilities
-add_subdirectory(logging)
+add_subdirectory(semaphore)
+add_subdirectory(threads)
 
 install(
-	TARGETS logging
+	TARGETS semaphore threads
 	EXPORT ${CMAKE_PROJECT_NAME}-targets
 	RUNTIME DESTINATION bin
 	ARCHIVE DESTINATION lib

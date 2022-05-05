@@ -1,16 +1,13 @@
-set(UTILS_HEADER_DEST include/${CMAKE_PROJECT_NAME})
+project("structures")
 
-# basic data types
-add_subdirectory(structures)
+set(UTILS_HEADER_DEST include/${CMAKE_PROJECT_NAME}/${PROJECT_NAME})
 
-# extended funtionality and cross platform wrapper
-add_subdirectory(async)
-
-# utilities
-add_subdirectory(logging)
+add_subdirectory(dynamic-array)
+add_subdirectory(linkedlist)
+add_subdirectory(ringbuffer)
 
 install(
-	TARGETS logging
+	TARGETS dynamic-array linkedlist ringbuffer 
 	EXPORT ${CMAKE_PROJECT_NAME}-targets
 	RUNTIME DESTINATION bin
 	ARCHIVE DESTINATION lib
