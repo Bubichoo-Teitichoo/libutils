@@ -73,7 +73,7 @@ void log_write( const log_level_t lvl, const char *fmt, ... )
     struct timespec now = { 0 };
     clock_gettime( CLOCK_REALTIME, &now );
 
-    char ts[ 32 ] = { 0 };
+    char ts[ 64 ] = { 0 };
     log_create_timestamp( ts, sizeof( ts ), &now );
 
     va_list ap;
