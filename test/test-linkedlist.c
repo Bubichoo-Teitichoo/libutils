@@ -1,7 +1,7 @@
 #define __ENABLE_MEMORY_ARGUMENT_CHECKING__
 #include "testing.h"
 
-#include "linkedlist/linkedlist.c"
+#include "structures/linkedlist/linkedlist.c"
 
 static void test_linked_list_node_new( void **status );
 static void test_linked_list_node_new_mem_alloc_fails( void **status );

@@ -1,6 +1,6 @@
 #include "testing.h"
 // include uut after testing to override malloc etc...
-#include "ringbuffer/ringbuffer.c"
+#include "structures/ringbuffer/ringbuffer.c"
 
 // Black Box Testing of the ring_buffer_* API
 
