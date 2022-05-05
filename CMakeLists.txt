@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
-project("utilities" VERSION 0.1.0 LANGUAGES C)
+project("libutils" VERSION 0.1.0 LANGUAGES C)
+
+include(cmake/base.config.cmake)
 
 option(BUILD_TESTING            "build unit tests"          OFF)
 option(BUILD_SHARED_LIBS        "build shared libraries"    OFF)
