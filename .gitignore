@@ -53,6 +53,7 @@ dkms.conf
 
 # MSVC directories and files
 .vs/**
+.vscode/**
 CMakeSettings.json
 
 # MacOS files
