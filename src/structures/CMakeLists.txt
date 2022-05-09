@@ -5,9 +5,10 @@ set(UTILS_HEADER_DEST include/${CMAKE_PROJECT_NAME}/${PROJECT_NAME})
 add_subdirectory(dynamic-array)
 add_subdirectory(linkedlist)
 add_subdirectory(ringbuffer)
+add_subdirectory(stringex)
 
 install(
-	TARGETS dynamic-array linkedlist ringbuffer 
+	TARGETS dynamic-array linkedlist ringbuffer stringex
 	EXPORT ${CMAKE_PROJECT_NAME}-targets
 	RUNTIME DESTINATION bin
 	ARCHIVE DESTINATION lib
