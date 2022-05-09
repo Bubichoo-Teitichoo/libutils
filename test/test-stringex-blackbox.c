@@ -28,7 +28,7 @@ static void test_strrstrip_empty_string( void **status );
 static void test_strrstrip_empty_string_retval( void **status );
 static void test_strrstrip_null_input( void **status );
 static void test_strrstrip_null_separator( void **status );
-static void test_strrstrip_null_separator_null( void **status );
+static void test_strrstrip_null_separator_retval( void **status );
 
 static void test_strlstrip( void **status );
 
@@ -61,7 +61,9 @@ int main( void )
         cmocka_unit_test( test_strrstrip_no_match_retval ),
         cmocka_unit_test( test_strrstrip_empty_string),
         cmocka_unit_test( test_strrstrip_empty_string_retval ),
-        cmocka_unit_test( test_strrstrip_null),
+        cmocka_unit_test( test_strrstrip_null_input ),
+        cmocka_unit_test( test_strrstrip_null_separator ),
+        cmocka_unit_test( test_strrstrip_null_separator_retval ),
         cmocka_unit_test( test_strlstrip ),
         cmocka_unit_test( test_strdup_format ),
         cmocka_unit_test( test_strdup_vaformat ),
@@ -180,19 +182,58 @@ void test_strstrip_null_separator_retval( void **status )
 // ------------------------------------ TEST strrstrip() ------------------------------------
 // ------------------------------------------------------------------------------------------
 
-void test_strrstrip_single_sep( void **status ){}
-void test_strrstrip_single_sep_retval( void **status ){}
-void test_strrstrip_multi_sep( void **status ){}
-void test_strrstrip_multi_sep_retval( void **status ){}
-void test_strrstrip_all_match( void **status ){}
-void test_strrstrip_all_match_retval( void **status ){}
-void test_strrstrip_no_match( void **status ){}
-void test_strrstrip_no_match_retval( void **status ){}
-void test_strrstrip_empty_string( void **status ){}
-void test_strrstrip_empty_string_retval( void **status ){}
-void test_strrstrip_null( void **status )
+void test_strrstrip_single_sep( void **status )
 {
 }
+
+void test_strrstrip_single_sep_retval( void **status )
+{
+}
+
+void test_strrstrip_multi_sep( void **status )
+{
+}
+
+void test_strrstrip_multi_sep_retval( void **status )
+{
+}
+
+void test_strrstrip_all_match( void **status )
+{
+}
+
+void test_strrstrip_all_match_retval( void **status )
+{
+}
+
+void test_strrstrip_no_match( void **status )
+{
+}
+
+void test_strrstrip_no_match_retval( void **status )
+{
+}
+
+void test_strrstrip_empty_string( void **status )
+{
+}
+
+void test_strrstrip_empty_string_retval( void **status )
+{
+}
+
+
+void test_strrstrip_null_input( void **status )
+{
+}
+void test_strrstrip_null_separator( void **status )
+{
+}
+
+void test_strrstrip_null_separator_retval( void **status )
+{
+}
+
 
 void test_strlstrip( void **status )
 {
@@ -201,6 +242,7 @@ void test_strlstrip( void **status )
 void test_strdup_format( void **status )
 {
 }
+
 void test_strdup_vaformat( void **status )
 {
 }
