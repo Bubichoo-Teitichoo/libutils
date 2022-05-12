@@ -9,18 +9,19 @@ int thrd_create( thrd_t *tid, thrd_start_t func, void *arg )
 
 int thrd_join( thrd_t tid, int *res )
 {
-    WaitForSingleObject( tid, INFINITE );
+    int retval = thrd_error;
 
-    DWORD retval;
-    if( GetExitCodeThread( tid, &retval ) && CloseHandle( tid ) )
+    DWORD thrd_result;
+    if( WAIT_OBJECT_0 == WaitForSingleObject( tid, INFINITE ) && GetExitCodeThread( tid, &thrd_result ) )
     {
         if( NULL != res )
         {
-            *res = (int)retval;
+            *res = (int)thrd_result;
         }
-        return thrd_success;
+        retval = thrd_success;
     }
-    return thrd_error;
+    CloseHandle( tid );
+    return retval;
 }
 
 thrd_t thrd_current( void )
@@ -28,63 +29,172 @@ thrd_t thrd_current( void )
     return GetCurrentThread();
 }
 
-int mtx_init( mtx_t *mutex, int type )
+struct mtx_t
 {
-    *mutex = CreateMutex( NULL, FALSE, NULL );
+    union
+    {
+        HANDLE mtx;
+        CRITICAL_SECTION cs;
+    };
+    int type;
+};
 
-    return ( ( NULL == *mutex ) ? thrd_error : thrd_success );
+int mtx_init( mtx_t *mutex, const int type )
+{
+    int retval = thrd_error;
+    if( NULL != mutex )
+    {
+        mutex[ 0 ] = (mtx_t)malloc( sizeof( struct mtx_t ) );
+
+        if( NULL != *mutex )
+        {
+            // critical section lack the ability for a timed wait
+            // on the other hand they have a lot less overhead and therefor
+            // are much faster.
+            if( type & mtx_timed )
+            {
+                mutex[ 0 ]->mtx = CreateMutex( NULL, FALSE, NULL );
+                if( NULL != mutex[ 0 ]->mtx )
+                {
+                    retval = thrd_success;
+                }
+            }
+            else
+            {
+                InitializeCriticalSection( &( mutex[ 0 ]->cs ) );
+                retval = thrd_success;
+            }
+            mutex[ 0 ]->type = type;
+        }
+    }
+    return retval;
 }
 
 void mtx_destroy( mtx_t *mutex )
 {
-    CloseHandle( *mutex );
+    if( NULL != mutex )
+    {
+        if( mutex[ 0 ]->type & mtx_timed )
+        {
+            (void)CloseHandle( mutex[ 0 ]->mtx );
+        }
+        else
+        {
+            DeleteCriticalSection( &mutex[ 0 ]->cs );
+        }
+        free( mutex );
+    }
 }
 
 int mtx_lock( mtx_t *mutex )
 {
-    return ( ( WAIT_OBJECT_0 == WaitForSingleObject( *mutex, INFINITE ) ) ? thrd_success : thrd_error );
+    int retval = thrd_error;
+    if( NULL != mutex)
+    {
+        if( mutex[0]->type & mtx_timed )
+        {
+            switch( WaitForSingleObject( mutex[0]->mtx, INFINITE ) )
+            {
+                case WAIT_OBJECT_0:
+                    retval = thrd_success;
+                    break;
+                default:
+                    retval = thrd_error;
+                    break;
+            }
+        }
+        else
+        {
+            EnterCriticalSection( &mutex[ 0 ]->cs );
+            retval = thrd_success;
+        }
+    }
+    return retval;
 }
 
 int mtx_trylock( mtx_t *mutex )
 {
-    const DWORD result = WaitForSingleObject( *mutex, 0U );
-    switch( result )
+    int retval = thrd_error;
+    if( NULL != mutex )
     {
-        case WAIT_OBJECT_0:
-            return thrd_success;
-        case WAIT_TIMEOUT:
-            return thrd_busy;
-        default:
-            return thrd_error;
+        if( mutex[ 0 ]->type & mtx_timed )
+        {
+            switch( WaitForSingleObject( *mutex, 0U ) )
+            {
+                case WAIT_OBJECT_0:
+                    retval = thrd_success;
+                    break;
+                case WAIT_TIMEOUT:
+                    retval = thrd_busy;
+                    break;
+                default:
+                    retval = thrd_error;
+            }
+        }
+        else
+        {
+            if( TryEnterCriticalSection( &mutex[0]->cs ) )
+            {
+                retval = thrd_success;
+            }
+            else
+            {
+                retval = thrd_busy;
+            }
+        }
     }
+    return retval;
 }
 
 int mtx_timedlock( mtx_t *mutex, const struct timespec *time_point )
 {
-    struct timespec now;
-    timespec_get( &now, TIME_UTC );
+    int retval = thrd_error;
 
-    DWORD wait_time = ( (DWORD)time_point->tv_sec - (DWORD)now.tv_sec ) * 1000;
-    if( 0 > wait_time )
+    if( NULL != mutex && mutex[ 0 ]->type & mtx_timed )
     {
-        wait_time = 0;
-    }
-    const DWORD result = WaitForSingleObject( *mutex, wait_time );
-    switch( result )
-    {
-        case WAIT_OBJECT_0:
-            return thrd_success;
-        case WAIT_TIMEOUT:
-            return thrd_timedout;
-        default:
-            return thrd_error;
+        DWORD wait_time = 0U;
+        if( NULL != time_point )
+        {
+            struct timespec now;
+            (void)timespec_get( &now, TIME_UTC );
+
+            const DWORD nowms = now.tv_sec * 1000U + now.tv_nsec / 1000000U;
+            const DWORD thenms = time_point->tv_sec * 1000U + time_point->tv_nsec / 1000000U;
+
+            wait_time = thenms - nowms;
+        }
+
+        switch( WaitForSingleObject( *mutex, wait_time ) )
+        {
+            case WAIT_OBJECT_0:
+                retval = thrd_success;
+            case WAIT_TIMEOUT:
+                retval = thrd_timedout;
+            default:
+                break;
+        }
     }
 
-    return 0;
+    return retval;
 }
 
 int mtx_unlock( mtx_t *mutex )
 {
+    int retval = thrd_error;
+    if( NULL != mutex )
+    {
+        if( mutex[ 0 ]->type & mtx_timed && ReleaseMutex( mutex[ 0 ]->mtx ) )
+        {
+            retval = thrd_success;
+        }
+        else
+        {
+            LeaveCriticalSection( &mutex[ 0 ]->cs );
+            retval = thrd_success;
+        }
+    }
+    return retval;
+
     return ( ( 0 != ReleaseMutex( *mutex ) ) ? thrd_success : thrd_error );
 }
 
