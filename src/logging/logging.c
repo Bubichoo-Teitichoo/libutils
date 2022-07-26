@@ -44,7 +44,7 @@ static void log_create_timestamp( char *buf, size_t len, struct timespec *ts );
 static inline void log_init( const int init_default )
 {
     static atomic_flag initialized = ATOMIC_FLAG_INIT;
-    if( 0 == atomic_flag_test_and_set(&initialized) )
+    if( 0 == atomic_flag_test_and_set( &initialized ) )
     {
         mtx_init( &mtx, 0U );
         sinks = dynamic_array_new( sizeof( log_sink_t ), 10 );
@@ -56,14 +56,14 @@ static inline void log_init( const int init_default )
     }
 }
 
-static inline log_sink_t *log_append_sink( log_sink_t *sink )
+static inline log_sink_t *log_append_sink( const log_sink_t *sink )
 {
     log_init( 0 );
 
     mtx_lock( &mtx );
-    sink = dynamic_array_append( sinks, sink );
+    log_sink_t *retval = dynamic_array_append( sinks, sink );
     mtx_unlock( &mtx );
-    return sink;
+    return retval;
 }
 
 void log_write( const log_level_t lvl, const char *fmt, ... )
@@ -82,8 +82,8 @@ void log_write( const log_level_t lvl, const char *fmt, ... )
     vsnprintf( msg, sizeof( msg ), fmt, ap );
     va_end( ap );
 
-    const char *colored_lvl_name = log_level_to_ansii_color_string( lvl );
     const char *lvl_name         = log_level_to_string( lvl );
+    const char *lvl_name_colored = log_level_to_ansii_color_string( lvl );
 
     for( size_t idx = 0U; idx < dynamic_array_len( sinks ); idx++ )
     {
@@ -98,7 +98,7 @@ void log_write( const log_level_t lvl, const char *fmt, ... )
             {
                 if( sink->fsink.colored )
                 {
-                    fprintf( sink->fsink.file, "%s [%s] %s\n", ts, colored_lvl_name, msg );
+                    fprintf( sink->fsink.file, "%s [%s] %s\n", ts, lvl_name_colored, msg );
                 }
                 else
                 {
@@ -119,22 +119,28 @@ void log_set_level( log_sink_t *sink, const log_level_t loglevel )
 
 log_sink_t *log_add_cb_sink( log_message_sink callback, const log_level_t loglevel, void *data )
 {
-    log_sink_t sink      = { 0 };
-    sink.type            = LOG_SINK_CB;
-    sink.cbsink.callback = callback;
-    sink.cbsink.data     = data;
-    sink.max             = loglevel;
+    const log_sink_t sink = { 
+        .type   = LOG_SINK_CB, 
+        .max    = loglevel,
+        .fsink  = { 0 },
+        .cbsink = { 
+            .callback = callback, 
+            .data     = data
+        }
+    };
     return log_append_sink( &sink );
 }
 
 log_sink_t *log_add_file_sink( FILE *file, const log_level_t loglevel, int colored )
 {
-    log_sink_t sink    = { 0 };
-    sink.type          = LOG_SINK_FILE;
-    sink.fsink.file    = file;
-    sink.fsink.opened  = 0;
-    sink.fsink.colored = colored;
-    sink.max           = loglevel;
+    const log_sink_t sink = { 
+        .type          = LOG_SINK_FILE,
+        .fsink.file    = file,
+        .fsink.opened  = 0,
+        .fsink.colored = colored,
+        .cbsink        = { 0 },
+        .max           = loglevel 
+    };
     return log_append_sink( &sink );
 }
 
@@ -145,7 +151,7 @@ void log_remove_sink( const log_sink_t *const sink )
     {
         if( sink == dynamic_array_get( sinks, idx ) )
         {
-            dynamic_array_remove_fast( sinks, idx );
+            (void)dynamic_array_remove_fast( sinks, idx );
             break;
         }
     }
