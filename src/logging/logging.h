@@ -25,6 +25,8 @@ typedef struct log_sink log_sink_t;
 
 typedef void ( *log_message_sink )( const log_level_t level, struct timespec *ts, const char *msg, void *data );
 
+extern log_sink_t *default_log_sink;
+
 void log_write( const log_level_t level, const char *fmt, ... );
 void log_set_level(log_sink_t *sink, const log_level_t loglevel );
 
