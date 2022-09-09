@@ -35,8 +35,12 @@ static linked_list_node_t *linked_list_node_new( const linked_list_t *const list
     return (linked_list_node_t *)node;
 }
 
-static void linked_list_node_free( linked_list_node_t *const node )
+static void linked_list_node_free( linked_list_node_t *const node, linked_list_closure closure )
 {
+    if( closure )
+    {
+        closure( LINKED_LIST_NODE_DATA( node ) );
+    }
     free( node );
 }
 
@@ -50,7 +54,7 @@ linked_list_t *linked_list_new( const size_t element_size )
     return list;
 }
 
-void linked_list_free( linked_list_t *const list )
+void linked_list_free( linked_list_t *const list, linked_list_closure closure )
 {
     if( NULL != list )
     {
@@ -58,7 +62,7 @@ void linked_list_free( linked_list_t *const list )
         while( NULL != node )
         {
             linked_list_node_t *const next = linked_list_node_next( node );
-            linked_list_node_free( node );
+            linked_list_node_free( node, closure );
             node = next;
         }
         free( list );
@@ -90,7 +94,7 @@ linked_list_node_t *linked_list_append( linked_list_t *const list, const void *c
     return node;
 }
 
-int linked_list_remove( linked_list_t *const list, linked_list_node_t *const node )
+int linked_list_remove( linked_list_t *const list, linked_list_node_t *const node, linked_list_closure closure )
 {
     const int result = ( ( NULL == list ) || ( NULL == node ) || ( list != node->parent ) );
     if( 0 == result )
@@ -117,7 +121,7 @@ int linked_list_remove( linked_list_t *const list, linked_list_node_t *const nod
         {
             list->last = prev;
         }
-        linked_list_node_free( node );
+        linked_list_node_free( node, closure );
         list->length--;
     }
     return result;
