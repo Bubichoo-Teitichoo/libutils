@@ -69,7 +69,7 @@ enum
     mtx_timed     = 2
 };
 
-typedef struct mtx_t *mtx_t;
+typedef struct mtx *mtx_t;
 
 /// @brief 
 /// @param mutex 
