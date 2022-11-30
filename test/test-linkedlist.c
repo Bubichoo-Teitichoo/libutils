@@ -8,6 +8,7 @@ static void test_linked_list_node_new_mem_alloc_fails( void **status );
 
 static void test_linked_list_node_free( void **status );
 static void test_linked_list_node_free_node_null( void **status );
+static void test_linked_list_node_free_closure( void **status );
 
 static void test_linked_list_new( void **status );
 static void test_linked_list_new_mem_alloc_fails( void **status );
@@ -64,6 +65,7 @@ int main( void )
         cmocka_unit_test( test_linked_list_node_new_mem_alloc_fails ),
         cmocka_unit_test( test_linked_list_node_free ),
         cmocka_unit_test( test_linked_list_node_free_node_null ),
+        cmocka_unit_test( test_linked_list_node_free_closure ),
         cmocka_unit_test( test_linked_list_new ),
         cmocka_unit_test( test_linked_list_new_mem_alloc_fails ),
         cmocka_unit_test( test_linked_list_free_list ),
@@ -122,6 +124,11 @@ static linked_list_node_t *mocked_linked_list_node_init( mocked_linked_list_node
     return node;
 }
 
+static void mocked_linked_list_closure(void *data)
+{
+    check_expected(data);
+}
+
 //==============================================================================
 //                         tests for linked_list_node_t
 //==============================================================================
@@ -156,13 +163,23 @@ void test_linked_list_node_free( void **status )
     linked_list_node_t node = { 0 };
 
     mocked_free( &node );
-    linked_list_node_free( &node );
+    linked_list_node_free( &node, NULL );
 }
 
 void test_linked_list_node_free_node_null( void **status )
 {
     mocked_free( NULL );
-    linked_list_node_free( NULL );
+    linked_list_node_free( NULL, NULL);
+}
+
+void test_linked_list_node_free_closure( void **status )
+{
+    linked_list_node_t node = { 0 };
+
+    expect_value(mocked_linked_list_closure, data, LINKED_LIST_NODE_DATA(&node));
+    mocked_free( &node );
+
+    linked_list_node_free(&node, mocked_linked_list_closure);
 }
 
 //==============================================================================
@@ -213,12 +230,12 @@ void test_linked_list_free_list( void **status )
 
     mocked_free( &list );
 
-    linked_list_free( &list );
+    linked_list_free( &list, NULL );
 }
 
 void test_linked_list_free_list_null( void **status )
 {
-    linked_list_free( NULL );
+    linked_list_free( NULL, NULL );
 }
 
 void test_linked_list_free_empty_list( void **status )
@@ -226,7 +243,7 @@ void test_linked_list_free_empty_list( void **status )
     linked_list_t list = { 0 };
 
     mocked_free( &list );
-    linked_list_free( &list );
+    linked_list_free( &list, NULL );
 }
 
 void test_linked_list_append( void **status )
@@ -304,14 +321,14 @@ void test_linked_list_remove_list_null( void **status )
 {
     linked_list_node_t node = { 0 };
 
-    assert_int_equal( 1, linked_list_remove( NULL, &node ) );
+    assert_int_equal( 1, linked_list_remove( NULL, &node, NULL ) );
 }
 
 void test_linked_list_remove_node_null( void **status )
 {
     linked_list_t list = { 0 };
 
-    assert_int_equal( 1, linked_list_remove( &list, NULL ) );
+    assert_int_equal( 1, linked_list_remove( &list, NULL, NULL ) );
 }
 
 void test_linked_list_remove_list_not_node_parent( void **status )
@@ -319,7 +336,7 @@ void test_linked_list_remove_list_not_node_parent( void **status )
     linked_list_t list      = { 0 };
     linked_list_node_t node = { 0 };
 
-    assert_int_equal( 1, linked_list_remove( &list, &node ) );
+    assert_int_equal( 1, linked_list_remove( &list, &node, NULL ) );
 }
 
 void test_linked_list_remove_first_element( void **status )
@@ -337,7 +354,7 @@ void test_linked_list_remove_first_element( void **status )
 
     mocked_free( node0 );
 
-    assert_int_equal( 0, linked_list_remove( &list, node0 ) );
+    assert_int_equal( 0, linked_list_remove( &list, node0, NULL ) );
     assert_int_equal( 2U, list.length );
     assert_ptr_equal( node1, list.first );
     assert_ptr_equal( node2, list.last );
@@ -363,7 +380,7 @@ void test_linked_list_remove_last_element( void **status )
 
     mocked_free( node2 );
 
-    assert_int_equal( 0, linked_list_remove( &list, node2 ) );
+    assert_int_equal( 0, linked_list_remove( &list, node2, NULL ) );
     assert_int_equal( 2U, list.length );
     assert_ptr_equal( node0, list.first );
     assert_ptr_equal( node1, list.last );
@@ -389,7 +406,7 @@ void test_linked_list_remove_second_element( void **status )
 
     mocked_free( node1 );
 
-    assert_int_equal( 0, linked_list_remove( &list, node1 ) );
+    assert_int_equal( 0, linked_list_remove( &list, node1, NULL ) );
     assert_int_equal( 2U, list.length );
     assert_ptr_equal( node0, list.first );
     assert_ptr_equal( node2, list.last );

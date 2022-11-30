@@ -29,7 +29,7 @@ thrd_t thrd_current( void )
     return GetCurrentThread();
 }
 
-struct mtx_t
+struct mtx
 {
     union
     {
@@ -44,28 +44,29 @@ int mtx_init( mtx_t *mutex, const int type )
     int retval = thrd_error;
     if( NULL != mutex )
     {
-        mutex[ 0 ] = (mtx_t)malloc( sizeof( struct mtx_t ) );
+        struct mtx *mtx = calloc( 1, sizeof( struct mtx ) );
 
-        if( NULL != *mutex )
+        if( NULL != mtx )
         {
             // critical section lack the ability for a timed wait
             // on the other hand they have a lot less overhead and therefor
             // are much faster.
             if( type & mtx_timed )
             {
-                mutex[ 0 ]->mtx = CreateMutex( NULL, FALSE, NULL );
-                if( NULL != mutex[ 0 ]->mtx )
+                mtx->mtx = CreateMutex( NULL, FALSE, NULL );
+                if( NULL != mtx->mtx )
                 {
                     retval = thrd_success;
                 }
             }
             else
             {
-                InitializeCriticalSection( &( mutex[ 0 ]->cs ) );
+                InitializeCriticalSection( &mtx->cs );
                 retval = thrd_success;
             }
-            mutex[ 0 ]->type = type;
+            mtx->type = type;
         }
+        *mutex = mtx;
     }
     return retval;
 }
@@ -74,15 +75,16 @@ void mtx_destroy( mtx_t *mutex )
 {
     if( NULL != mutex )
     {
-        if( mutex[ 0 ]->type & mtx_timed )
+        struct mtx *mtx = *mutex;
+        if( ( mtx->type & mtx_timed ) && mtx->mtx )
         {
-            (void)CloseHandle( mutex[ 0 ]->mtx );
+            (void)CloseHandle( mtx->mtx );
         }
-        else
+        else if( !( mtx->type & mtx_timed ) )
         {
-            DeleteCriticalSection( &mutex[ 0 ]->cs );
+            DeleteCriticalSection( &mtx->cs );
         }
-        free( mutex );
+        free( mtx );
     }
 }
 
@@ -158,8 +160,8 @@ int mtx_timedlock( mtx_t *mutex, const struct timespec *time_point )
             struct timespec now;
             (void)timespec_get( &now, TIME_UTC );
 
-            const DWORD nowms = now.tv_sec * 1000U + now.tv_nsec / 1000000U;
-            const DWORD thenms = time_point->tv_sec * 1000U + time_point->tv_nsec / 1000000U;
+            const DWORD nowms = ( DWORD )( now.tv_sec * 1000U + now.tv_nsec / 1000000U );
+            const DWORD thenms = ( DWORD )( time_point->tv_sec * 1000U + time_point->tv_nsec / 1000000U );
 
             wait_time = thenms - nowms;
         }

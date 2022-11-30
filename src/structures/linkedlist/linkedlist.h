@@ -6,8 +6,10 @@
 typedef struct linked_list linked_list_t;
 typedef struct linked_list_node linked_list_node_t;
 
-/// 
-#define LINKED_LIST_NEW(TYPE) linked_list_new(sizeof(TYPE))
+typedef void ( *linked_list_closure )( void *data );
+
+///
+#define LINKED_LIST_NEW( TYPE ) linked_list_new( sizeof( TYPE ) )
 
 /// @memberof linked_list
 ///
@@ -20,7 +22,7 @@ linked_list_t *linked_list_new( const size_t element_size );
 ///
 /// @brief
 /// @param list
-void linked_list_free( linked_list_t *const list );
+void linked_list_free( linked_list_t *const list, linked_list_closure closure );
 
 /// @memberof linked_list
 ///
@@ -36,7 +38,7 @@ linked_list_node_t *linked_list_append( linked_list_t *const list, const void *c
 /// @param list
 /// @param node
 /// @return
-int linked_list_remove( linked_list_t *const list, linked_list_node_t *const node );
+int linked_list_remove( linked_list_t *const list, linked_list_node_t *const node, linked_list_closure closure );
 
 /// @memberof linked_list
 ///

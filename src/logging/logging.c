@@ -1,6 +1,7 @@
 #include "logging.h"
 #include "logging.priv.h"
 
+#include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -37,9 +38,22 @@ struct log_sink
 
 static dynamic_array_t *sinks = NULL;
 static mtx_t mtx;
+static log_sink_t default_sink = { 
+    .type = LOG_SINK_FILE,
+    .max = LOG_LEVEL_WARNING, 
+    .fsink.file = NULL,
+    .fsink.colored = 1,
+    .fsink.opened = 0
+};
+
+log_sink_t *default_log_sink = &default_sink;
 
 static char *log_level_to_ansii_color_string( const log_level_t lvl );
 static void log_create_timestamp( char *buf, size_t len, struct timespec *ts );
+
+static inline void log_init( const int init_default );
+static void log_finalize( void );
+static inline log_sink_t *log_append_sink( const log_sink_t *sink );
 
 static inline void log_init( const int init_default )
 {
@@ -51,9 +65,16 @@ static inline void log_init( const int init_default )
 
         if( 1 == init_default )
         {
-            log_add_file_sink( stderr, LOG_LEVEL_INFO, 1 );
+            default_log_sink->fsink.file = stderr;
+            default_log_sink = log_append_sink( default_log_sink );
         }
+        atexit( log_finalize );
     }
+}
+
+static void log_finalize( void )
+{
+    dynamic_array_free( sinks );
 }
 
 static inline log_sink_t *log_append_sink( const log_sink_t *sink )

@@ -2,7 +2,7 @@
 
 int sem_init( sem_t *sem, int pshare, unsigned int value )
 {
-    *sem = CreateSemaphore( NULL, value, value, NULL );
+    *sem = CreateSemaphore( NULL, (LONG)value, LONG_MAX, NULL );
     return ( ( NULL != *sem ) ? 0 : -1 );
 }
 
@@ -18,5 +18,5 @@ int sem_post( sem_t *sem )
 
 int sem_wait( sem_t *sem )
 {
-    return ( ( WAIT_OBJECT_0 == WaitForSingleObject( *sem, INFINITE ) ) ? 0 : -1 );
+    return ( ( WAIT_OBJECT_0 == WaitForSingleObjectEx( *sem, INFINITE, FALSE ) ) ? 0 : -1 );
 }
