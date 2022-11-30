@@ -1,21 +1,21 @@
-#if !defined( __STREXT_H__ )
-#define __STREXT_H__
+#if !defined( __STRINGEX_H__ )
+#define __STRINGEX_H__
 
 #include <stdlib.h>
 #include <stdarg.h>
 
 /// @brief Remove unwanted characters from begin and end of a string.
-/// 
+///
 /// When stripping the left side the remaining string is moved to @p string.
 /// This way you're able to free allocated memory without storing a pointer
 /// before calling this function.
-/// 
+///
 /// @note: This function alters the input string. If you dont want to alter
 ///        the input consider using strdup_strip() oder strcpy_strip() instead.
 ///
 /// @param[in,out]	string		String you want to remove unwanted character from
-/// @param[in]		separators  '\0' terminated list of characters to remove from @p string
-/// 
+/// @param[in]		separators  null terminated list of characters to remove from @p string
+///
 /// @retval char* @string
 char *strstrip( char *string, const char *separators );
 
@@ -29,10 +29,10 @@ char *strstrip( char *string, const char *separators );
 ///        the input consider using strdup_strip() oder strcpy_strip() instead.
 ///
 /// @param[in,out]	string		String you want to remove unwanted character from
-/// @param[in]		separators  '\0' terminated list of characters to remove from @p string
+/// @param[in]		separators  null terminated list of characters to remove from @p string
 ///
 /// @retval char* @string
-char *strlstrip( char *text, const char *separators );
+char *strstripl( char *text, const char *separators );
 
 /// @brief Remove unwanted characters from end of a string.
 ///
@@ -40,24 +40,68 @@ char *strlstrip( char *text, const char *separators );
 ///        the input consider using strdup_strip() oder strcpy_strip() instead.
 ///
 /// @param[in,out]	string		String you want to remove unwanted character from
-/// @param[in]		separators  '\0' terminated list of characters to remove from @p string
+/// @param[in]		separators  null terminated list of characters to remove from @p string
 ///
-/// @retval char* @string
-char *strrstrip( char *text, const char *separators );
+/// @retval char* @p string
+char *strstripr( char *text, const char *separators );
 
+/// @brief Create a heap allocated copy of the given string and remove unwanted characters from begin and end.
+///
+/// The function will first create a duplicate of the string and then use strstrip()
+/// to remove the unwanted characters.
+///
+/// @param[in] string		String you want to copy and strip
+/// @param[in] separator	null terminated list of characters to remove from @p string
+///
+/// @retval NULL	if @p string is NULL or strdup() fails
+/// @retval char*	pointer to the newly allocated string
 char *strdup_strip( const char *string, const char *separator );
-char *strdup_lstrip( const char *string, const char *separator );
-char *strdup_rstrip( const char *string, const char *separator );
 
-char *strcpy_strip(char* dest, const size_t len, const char *string, const char *separator );
-char *strcpy_lstrip( char *dest, const size_t len, const char *string, const char *separator );
-char *strcpy_rstrip(char* dest, const size_t len, const char *string, const char *separator );
+/// @brief Create a heap allocated copy of the given string and remove unwanted characters from the begin.
+///
+/// The function will first create a duplicate of the string and then use strstripl()
+/// to remove the unwanted characters.
+///
+/// @param[in] string		String you want to copy and strip
+/// @param[in] separator	null terminated list of characters to remove from @p string
+///
+/// @retval NULL	if @p string is NULL or strdup() fails
+/// @retval char*	pointer to the newly allocated string
+char *strdup_stripl( const char *string, const char *separator );
+
+/// @brief Create a heap allocated copy of the given string and remove unwanted characters from the end.
+///
+/// The function will first create a duplicate of the string and then use strstripr()
+/// to remove the unwanted characters.
+///
+/// @param[in] string		String you want to copy and strip
+/// @param[in] separator	null terminated list of characters to remove from @p string
+///
+/// @retval NULL	if @p string is NULL or strdup() fails
+/// @retval char*	pointer to the newly allocated string
+char *strdup_stripr( const char *string, const char *separator );
+
+/// 
+/// @brief Copy a stripped version of @p string to @dest
+/// 
+/// @param[in,out]	dest		buffer the stripped version of @p string is 
+///								copied to
+/// @param[in]		len			maximum character to copy to @dest
+/// @param[in]		string		null terminated string you want to copy and strip.
+/// @param[in]		separator	null terminated list of characters that shall 
+///								be remove from @p string
+/// 
+/// @returns	the maximum amount of character that would have been written
+///				including the null terminator if @p dest was NULL or @p len was 0
+/// @returns	the number of characters that where written including the null
+///				terminator to @p dest but at most len
+/// 
+size_t strcpy_strip( char *dest, const size_t len, const char *string, const char *separator );
+size_t strcpy_stripl( char *dest, const size_t len, const char *string, const char *separator );
+size_t strcpy_stripr( char *dest, const size_t len, const char *string, const char *separator );
 
 char *strdup_format( const char *fmt, ... );
 char *strdup_vaformat( const char *fmt, va_list ap );
-
-char *strcpy_format( char *dest, size_t len, const char *fmt, ... );
-char *strcpy_vaformat( char *dest, size_t len, const char *fmt, ... );
 
 typedef struct string string_t;
 
@@ -87,9 +131,9 @@ int string_append_format( string_t *string, const char *fmt, ... );
 int string_append_vaformat( string_t *string, const char *fmt, va_list ap );
 
 int string_strip( string_t *string, const char *sep );
-int string_rstrip( string_t *string, const char *sep );
-int string_lstrip( string_t *string, const char *sep );
+int string_stripr( string_t *string, const char *sep );
+int string_stripl( string_t *string, const char *sep );
 
 int string_split( const string_t *string, string_t **dest, size_t *len );
 
-#endif   // __STREXT_H__
+#endif   // __STRINGEX_H__
