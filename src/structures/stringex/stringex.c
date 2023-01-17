@@ -82,7 +82,7 @@ char *strdup_strip( const char *string, const char *separator )
     char *result = NULL;
     if( NULL != string )
     {
-        result = _strdup( string );
+        result = strdup( string );
         if( NULL != result )
         {
             (void)strstrip( result, separator );
@@ -96,7 +96,7 @@ char *strdup_stripl( const char *string, const char *separator )
     char *result = NULL;
     if( NULL != string )
     {
-        result = _strdup( string );
+        result = strdup( string );
         if( NULL != result )
         {
             (void)strstripl( result, separator );
@@ -110,7 +110,7 @@ char *strdup_stripr( const char *string, const char *separator )
     char *result = NULL;
     if( NULL != string )
     {
-        result = _strdup( string );
+        result = strdup( string );
         if( NULL != result )
         {
             (void)strstripr( result, separator );
@@ -130,11 +130,18 @@ size_t strcpy_strip( char *dest, const size_t len, const char *string, const cha
 
     if( dest && len )
     {
-        if( len < result )
+        if(0U != result)
         {
-            result = len - 1;
+            if( len < result )
+            {
+                result = len - 1;
+            }
+            strncpy( dest, start, result );
         }
-        strncpy_s( dest, len, start, result );
+        else
+        {
+            dest[0] = '\0';
+        }
     }
     return result + 1;
 }
