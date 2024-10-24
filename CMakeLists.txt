@@ -3,9 +3,18 @@ project("libutils" VERSION 0.1.0 LANGUAGES C)
 
 include(cmake/base.config.cmake)
 
-option(BUILD_TESTING            "build unit tests"          OFF)
-option(BUILD_SHARED_LIBS        "build shared libraries"    OFF)
 option(LIBUTILS_BUILD_DOCS      "build documentation"       OFF)
+option(CMAKE_EXPORT_COMPILE_COMMANDS "If enabled, CMake will generate a compile_commands.json to use with different tools like clangd. For better integration the file will be linked in the current source directory." ON)
+
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+    cmake_language(DEFER CALL
+        file
+            CREATE_LINK
+            ${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json
+            ${CMAKE_CURRENT_SOURCE_DIR}/compile_commands.json
+            COPY_ON_ERROR SYMBOLIC
+)
+endif()
 
 add_subdirectory(src)
 
